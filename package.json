@@ -3,21 +3,28 @@
   "version": "0.0.1",
   "description": "Key Mapping Module",
   "main": "./lib/keymap-manager",
+  "author": "Steven Burrows",
+  "license": "ISC",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/SMBurrows/skeleton-key.git"
+    "compile": "babel -d lib/ src/",
+    "prepublish": "npm run compile",
+    "test": "jest"
   },
   "keywords": [
     "key-mapping",
     "javascript"
   ],
-  "author": "Steven Burrows",
-  "license": "ISC",
+  "dependencies": {},
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "jest": "^21.0.1"
+  },
+  "homepage": "https://github.com/SMBurrows/skeleton-key#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SMBurrows/skeleton-key.git"
+  },
   "bugs": {
     "url": "https://github.com/SMBurrows/skeleton-key/issues"
-  },
-  "homepage": "https://github.com/SMBurrows/skeleton-key#readme"
+  }
 }
