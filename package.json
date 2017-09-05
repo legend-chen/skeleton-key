@@ -1,0 +1,23 @@
+{
+  "name": "skeleton-key",
+  "version": "0.0.1",
+  "description": "Key Mapping Module",
+  "main": "./lib/keymap-manager",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SMBurrows/skeleton-key.git"
+  },
+  "keywords": [
+    "key-mapping",
+    "javascript"
+  ],
+  "author": "Steven Burrows",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/SMBurrows/skeleton-key/issues"
+  },
+  "homepage": "https://github.com/SMBurrows/skeleton-key#readme"
+}
