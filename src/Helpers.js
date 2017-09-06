@@ -1,5 +1,4 @@
 import { calculateSpecificity } from 'clear-cut';
-import KeyboardLayout from 'keyboard-layout'
 import USKeyMap from './US-Keymap';
 
 const MODIFIERS = new Set(['ctrl', 'alt', 'shift', 'cmd'])
@@ -232,18 +231,18 @@ const keystrokeForKeyboardEvent = (event, customKeystrokeResolvers) => {
 		}
 	}
 
-	if (
-		(key.length === 1 && !isLatinKeymap(KeyboardLayout.getCurrentKeymap())) ||
-		(metaKey && KeyboardLayout.getCurrentKeyboardLayout() === 'com.apple.keylayout.DVORAK-QWERTYCMD')
-	) {
-		if (characters = usCharactersForKeyCode(event.code)) {
-			if (event.shiftKey) {
-				key = characters.withShift;
-			}
-
-			key = characters.unmodified;
-		}
-	}
+	// if (
+	// 	(key.length === 1 && !isLatinKeymap(KeyboardLayout.getCurrentKeymap())) ||
+	// 	(metaKey && KeyboardLayout.getCurrentKeyboardLayout() === 'com.apple.keylayout.DVORAK-QWERTYCMD')
+	// ) {
+	// 	if (characters = usCharactersForKeyCode(event.code)) {
+	// 		if (event.shiftKey) {
+	// 			key = characters.withShift;
+	// 		}
+	//
+	// 		key = characters.unmodified;
+	// 	}
+	// }
 
 	let keystroke = '';
 	let keystrokes = [];
@@ -282,15 +281,15 @@ const keystrokeForKeyboardEvent = (event, customKeystrokeResolvers) => {
 }
 
 const nonAltModifiedKeyForKeyboardEvent = (event) => {
-	const currentKeymap = KeyboardLayout.getCurrentKeymap();
-	const characters = currentKeymap[event.code];
-
-	if (characters) {
-		if (event.shiftKey) {
-			return characters.withShift;
-		}
-		return characters.unmodified;
-	}
+	// const currentKeymap = KeyboardLayout.getCurrentKeymap();
+	// const characters = currentKeymap[event.code];
+	//
+	// if (characters) {
+	// 	if (event.shiftKey) {
+	// 		return characters.withShift;
+	// 	}
+	// 	return characters.unmodified;
+	// }
 }
 
 const characterForKeyboardEvent = (event) => {
