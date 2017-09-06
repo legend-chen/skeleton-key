@@ -2,7 +2,7 @@
   "name": "skeleton-key",
   "version": "0.0.1",
   "description": "Key Mapping Module",
-  "main": "./lib/keymap-manager",
+  "main": "./lib/KeyMapManager.js",
   "author": "Steven Burrows",
   "license": "ISC",
   "scripts": {

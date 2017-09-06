@@ -193,17 +193,19 @@ class KeymapManager {
 
 				let exactMatches = this.findExactMatches(exactMatchCandidates, currentTarget);
 				for (let i = 0, l = exactMatches.length; i < l; i++) {
+
 					const exactMatchCandidate = exactMatches[i];
 
 					if (exactMatchCandidate.command === 'native!') {
+
 						let shouldUsePartialMatches = false;
-						let eventHandled = true;
+						// let eventHandled = true;
 						break;
 					}
 
 					if (exactMatchCandidate.command === 'abort!') {
 						event.preventDefault();
-						eventHandled = true;
+						// eventHandled = true;
 						break;
 					}
 
@@ -311,12 +313,12 @@ class KeymapManager {
 	}
 
 	simulateTextInput(keydownEvent) {
-		var character, textInputEvent;
-		if (character = characterForKeyboardEvent(keydownEvent)) {
-			textInputEvent = document.createEvent("TextEvent");
-			textInputEvent.initTextEvent("textInput", true, true, window, character);
-			return keydownEvent.path[0].dispatchEvent(textInputEvent);
-		}
+		// var character, textInputEvent;
+		// if (character = characterForKeyboardEvent(keydownEvent)) {
+		// 	textInputEvent = document.createEvent("TextEvent");
+		// 	textInputEvent.initTextEvent("textInput", true, true, window, character);
+		// 	return keydownEvent.path[0].dispatchEvent(textInputEvent);
+		// }
 	}
 
 	findMatchCandidates(keystrokeArray, disabledBindings) {
@@ -439,14 +441,15 @@ class KeymapManager {
 
 		commandEvent.__proto__ = CommandEvent.prototype;
 		commandEvent.originalEvent = keyboardEvent;
-
+		//
 		if (document.contains(target)) {
 			target.dispatchEvent(commandEvent)
 		} else {
 			this.simulateBubblingOnDetachedTarget(target, commandEvent)
 		}
 
-		const { keyBindingAborted } = commandEvent;
+		const keyBindingAborted = commandEvent.keyBindingAborted;
+
 		if (!keyBindingAborted) {
 			keyboardEvent.preventDefault();
 		}
