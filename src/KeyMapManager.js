@@ -1,6 +1,16 @@
 import _ from 'lodash';
 import { Emitter, Disposable, CompositeDesposable } from 'event-kit';
 import CommandEvent from './CommandEvent';
+import {
+	normalizeKeystrokes,
+	keystrokeForKeyboardEvent,
+	isBareModifier,
+	keydownEvent,
+	keyupEvent,
+	characterForKeyboardEvent,
+	keystrokesMatch,
+	isKeyup
+} from './helpers';
 
 class KeymapManager {
 
@@ -29,6 +39,10 @@ class KeymapManager {
 		this.queuedKeyboardEvents = [];
 		this.queuedKeyStrokes = [];
 		this.bindingsToDisable = [];
+	}
+
+	destroy() {
+		return;
 	}
 
 	onDidMatchBinding(callback) {
@@ -119,7 +133,10 @@ class KeymapManager {
 		this.add(keymap, options.priority);
 	}
 
-	handleKeyboardEvent(event) {
+	handleKeyboardEvent(event, props = {}) {
+
+		const { replay, disabledBindings } = props;
+
 		if (event.keyCode === 229 && event.key !== 'Dead') {
 			return;
 		}
@@ -134,14 +151,14 @@ class KeymapManager {
 		this.queuedKeyStrokes.push(keystroke);
 		this.queuedKeyboardEvents.push(event);
 
-		let keystrokes = this.queuedKeystrokes.join(' ');
+		let keystrokes = this.queuedKeyStrokes.join(' ');
 		let target = event.target;
 
 		if (target === document.body && this.defaultTarget) {
 			target = this.defaultTarget;
 		}
 
-		const {
+		let {
 			partialMatchCandidates,
 			pendingKeyupMatchCandidates,
 			exactMatchCandidates
@@ -159,8 +176,8 @@ class KeymapManager {
 			}
 		}
 
-		hasPartialMatches = partialMatches.length > 0;
-		shouldUsePartialMatches = hasPartialMatches;
+		let hasPartialMatches = partialMatches.length > 0;
+		let shouldUsePartialMatches = hasPartialMatches;
 
 		if (isKeyup(keystroke)) {
 			exactMatchCandidates = exactMatchCandidates.concat(this.pendingKeyupMatcher.getMatches(keystroke));
@@ -236,7 +253,7 @@ class KeymapManager {
 				partiallyMatchedBindings: partialMatches,
 				keyboardEventTarget: target,
 			});
-		} else if (!dispatchedExactMatch? && !hasPartialMatches) {
+		} else if (!dispatchedExactMatch && !hasPartialMatches) {
 			this.emitter.emit('did-fail-to-match-binding', {
 				keystrokes,
 				eventType: event.type,
@@ -267,7 +284,7 @@ class KeymapManager {
 		} else if (dispatchedExactMatch && !hasPartialMatches && this.pendingPartialMatches) {
 			this.terminatePendingState();
 		} else {
-			clearQueuedKeystrokes();
+			this.clearQueuedKeystrokes();
 		}
 	}
 
@@ -330,18 +347,21 @@ class KeymapManager {
 			if (binding.command === 'unset!') {
 				ingnoreKeystrokes.add(bindings.keystrokes);
 			}
-		}
+		});
 
-		while(partialMatchCandidates.length > 0 && target !== document) {
-			let partialMatchCandidates = partialMatchCandidates.filter (binding) ->
-			if (!ignoreKeystrokes.has(binding.keystrokes) && target.webkitMatchesSelector(binding.selector)) {
-				partialMatches.push(binding);
-				return false;
-			} else {
-				return true;
+		if (target !== document) {
+			while(partialMatchCandidates.length > 0) {
+				let partialMatchCandidates = partialMatchCandidates.filter((binding) => {
+					if (!ignoreKeystrokes.has(binding.keystrokes) && target.webkitMatchesSelector(binding.selector)) {
+						partialMatches.push(binding);
+						return false;
+					} else {
+						return true;
+					}
+				});
+
+				let target = target.parentElement
 			}
-
-			let target = target.parentElement
 		}
 
 		return partialMatches.sort((a, b) => b.keystrokeCount - a.keystrokeCount);
@@ -366,8 +386,8 @@ class KeymapManager {
 
 		this.pendingPartialMatches = pendingPartialMatches;
 
-		if enableTimeout {
-			this.pendingStateTimeoutHandle = setTimeout(this.terminatePendingState.bind(this, true), @partialMatchTimeout);
+		if (enableTimeout) {
+			this.pendingStateTimeoutHandle = setTimeout(this.terminatePendingState.bind(this, true), this.partialMatchTimeout);
 		}
 	}
 
@@ -398,7 +418,7 @@ class KeymapManager {
 			}
 		}
 
-		if (fromTimeout and this.pendingPartialMatches) {
+		if (fromTimeout && this.pendingPartialMatches) {
 			this.terminatePendingState(true);
 		}
 
@@ -406,8 +426,12 @@ class KeymapManager {
 	}
 
 	dispatchCommandEvent(commandEvent, target, keyboardEvent) {
-		let commandEvent = new CustomEvent(command, bubbles: true, cancelable: true);
-		commandEvent.__proto__ = CommandEvent::;
+		commandEvent = new CustomEvent(command, {
+			bubbles: true,
+			cancelable: true
+		});
+
+		commandEvent.__proto__ = CommandEvent.prototype;
 		commandEvent.originalEvent = keyboardEvent;
 
 		if (document.contains(target)) {

@@ -1,3 +1,4 @@
+import { calculateSpecificity } from 'clear-cut';
 import USKeyMap from './US-Keymap';
 
 const MODIFIERS = new Set(['ctrl', 'alt', 'shift', 'cmd'])
@@ -44,10 +45,10 @@ const isLatinKeymap = (keymap) => {
 		return isLatin;
 	} else {
 		isLatin = (
-			(!keymap.KeyA? || isLatinCharacter(keymap.KeyA.unmodified)) &&
-			(!keymap.KeyS? || isLatinCharacter(keymap.KeyS.unmodified)) &&
-			(!keymap.KeyD? || isLatinCharacter(keymap.KeyD.unmodified)) &&
-			(!keymap.KeyF? || isLatinCharacter(keymap.KeyF.unmodified))
+			(!keymap.KeyA || isLatinCharacter(keymap.KeyA.unmodified)) &&
+			(!keymap.KeyS || isLatinCharacter(keymap.KeyS.unmodified)) &&
+			(!keymap.KeyD || isLatinCharacter(keymap.KeyD.unmodified)) &&
+			(!keymap.KeyF || isLatinCharacter(keymap.KeyF.unmodified))
 		);
 
 		LATIN_KEYMAP_CACHE.set(keymap, isLatin)
@@ -71,13 +72,13 @@ const isLowerCaseCharacter = (character) => {
 	character && character.length === 1 && character.toUpperCase() !== character;
 }
 
-usKeymap = null;
+let usKeymap = null;
 const usCharactersForKeyCode = (code) => {
 	usKeymap = USKeyMap
 	return usKeymap[code];
 }
 
-export normalizedKeystrokes = (keystroke) => {
+const normalizedKeystrokes = (keystroke) => {
 	let keyup = isKeyup(keystroke);
 	if (keyup) {
 		keystroke = keystroke.slice(1);
@@ -91,7 +92,9 @@ export normalizedKeystrokes = (keystroke) => {
 	let primaryKey = null;
 	const modifiers = new Set();
 
-	for (let key, i in keys) {
+	for (let i = 0, len = keys.length; i < len; i++) {
+		const key = keys[i];
+
 		if (modifiers.has(key)) {
 			modifiers.add(key);
 		} else {
@@ -108,7 +111,8 @@ export normalizedKeystrokes = (keystroke) => {
 			primaryKey = primaryKey.toLowerCase();
 		}
 	} else {
-		if (isUpperCaseCharacter(primaryKey));
+
+		if (isUpperCaseCharacter(primaryKey)) {;
 			modifiers.add('shift');
 		}
 
@@ -118,7 +122,7 @@ export normalizedKeystrokes = (keystroke) => {
 	}
 
 	keystroke = [];
-	if (!keyup || (key && !primaryKey) {
+	if (!keyup || (key && !primaryKey)) {
 		if (modifiers.has('ctrl')) {
 			keystroke.push('ctrl');
 		}
@@ -140,6 +144,7 @@ export normalizedKeystrokes = (keystroke) => {
 		keystroke.push(primaryKey);
 	}
 	keystroke.join('-');
+
 	if (keyup) {
 		keystroke = `^${keystroke}`;
 	}
@@ -151,7 +156,9 @@ const parseKeystroke = (keystroke) => {
 	const keys = [];
 	let keyStart = 0;
 
-	for (let charactor, index in keystroke) {
+	for (let i = 0, l = keystroke.length; i < l; i++) {
+		const charactor = keystroke[i];
+
 		if (charactor === '-') {
 			keys.push(keystroke.substring(keyStart, index));
 			keyStart = index + 1;
@@ -169,13 +176,13 @@ const parseKeystroke = (keystroke) => {
 	return keys;
 }
 
-const buildKeyboardEvent = (key, eventType, options) => {
+const buildKeyboardEvent = (key, eventType, options = {}) => {
 	const { ctrl, shift, alt, cmd, keyCode, target, location } = options;
 
 	const ctrlKey = ctrl || false;
 	const altKey = alt || false;
 	const shiftKey = shift || false;
-	const metaKey = meta || false;
+	const metaKey = cmd || false;
 	const bubbles = true
 	const cancelable = true;
 
@@ -193,16 +200,81 @@ const buildKeyboardEvent = (key, eventType, options) => {
 		});
 	}
 
+
 	return event;
 }
 
-export keystrokeForKeyboardEvent = (event, customKeystrokeResolvers) => {
-	const { key, code, ctrlKey, altKey, shiftKey, metaKey } = event;
-	console.log('TODO');
+const keystrokeForKeyboardEvent = (event, customKeystrokeResolvers) => {
+	let { key, code, ctrlKey, altKey, shiftKey, metaKey } = event;
+
+	if (NUMPAD_KEY_NAMES_BY_KEYBOARD_EVENT_CODE[code] && event.getModifierState('NumLock')) {
+		key = NUMPAD_KEY_NAMES_BY_KEYBOARD_EVENT_CODE[code];
+	}
+
+	if (KEY_NAMES_BY_KEYBOARD_EVENT_CODE[code]){
+		key = KEY_NAMES_BY_KEYBOARD_EVENT_CODE[code];
+	}
+
+	let isNonCharacterKey = key.length > 1;
+	if (isNonCharacterKey) {
+		key = NON_CHARACTER_KEY_NAMES_BY_KEYBOARD_EVENT_KEY[key] || key.toLowerCase();
+	} else {
+		if (shiftKey) {
+			key = key.toUpperCase();
+		} else {
+			key = key.toLowerCase();
+		}
+	}
+
+	if (
+		(key.length === 1 && !isLatinKeymap(KeyboardLayout.getCurrentKeymap())) ||
+		(metaKey && KeyboardLayout.getCurrentKeyboardLayout() === 'com.apple.keylayout.DVORAK-QWERTYCMD')
+	) {
+		if (characters = usCharactersForKeyCode(event.code)) {
+			if (event.shiftKey) {
+				key = characters.withShift;
+			}
+
+			key = characters.unmodified;
+		}
+	}
+
+	let keystroke = '';
+	let keystrokes = [];
+
+	if (key === 'ctrl' || (ctrlKey && event.type !== 'keyup')) {
+		keystrokes.push('ctrl');
+	}
+
+	if (key === 'alt' || (altKey && event.type !== 'keyup')) {
+		keystrokes.push('alt');
+	}
+
+	if (key === 'shift' || (shiftKey && event.type !== 'keyup'
+		&& (isNonCharacterKey || (isLatinCharacter(key) && isUpperCaseCharacter(key))))
+	) {
+		keystrokes.push('shift');
+	}
+
+	if (key === 'cmd' || (metaKey && event.type !== 'keyup')) {
+		keystrokes.push('cmd');
+	}
+
+	if (!MODIFIERS.has(key)) {
+		keystrokes.push(key);
+	}
+
+	keystroke = keystrokes.join('-');
+	if (event.type === 'keyup') {
+		keystroke = normalizeKeystroke(`^${keystroke}`);
+	}
+
+	// TODO: Add custom resolvers
+
+	return keystroke;
 }
 
-
-nonAltModifiedKeyForKeyboardEvent = (event) => {
+const nonAltModifiedKeyForKeyboardEvent = (event) => {
 	const currentKeymap = KeyboardLayout.getCurrentKeymap();
 	const characters = currentKeymap[event.code];
 
@@ -214,35 +286,31 @@ nonAltModifiedKeyForKeyboardEvent = (event) => {
 	}
 }
 
-export MODIFIERS = MODIFIERS;
-
-export characterForKeyboardEvent = (event) => {
+const characterForKeyboardEvent = (event) => {
 	if (event.key.length === 1 && !(event.ctrlKey && event.metaKey)) {
 		return event.key;
 	}
 }
 
-export calculateSpecificity = calculateSpecificity;
+const isBareModifier = (keystroke) => ENDS_IN_MODIFIER_REGEX.test(keystroke);
 
-export isBareModifier = (keystroke) => ENDS_IN_MODIFIER_REGEX.test(keystroke);
-
-export isModifierKeyup = (keystroke) => {
+const isModifierKeyup = (keystroke) => {
 	return isKeyup(keystroke) && ENDS_IN_MODIFIER_REGEX.test(keystroke);
 }
 
-export isKeyup = (keystroke) => {
-	keystroke.startsWith('^') and keystroke !== '^';
+const isKeyup = (keystroke) => {
+	keystroke.startsWith('^') && keystroke !== '^';
 }
 
-export keydownEvent = (key, options) => {
+const keydownEvent = (key, options) => {
 	return buildKeyboardEvent(key, 'keydown', options);
 }
 
-export keyupEvent = (key, options) => {
+const keyupEvent = (key, options) => {
 	return buildKeyboardEvent(key, 'keyup', options);
 }
 
-export getModifierKeys = (keystroke) => {
+const getModifierKeys = (keystroke) => {
 	const keys = keystroke.split('-');
 	let mod_keys = [];
 
@@ -254,3 +322,18 @@ export getModifierKeys = (keystroke) => {
 
 	return mod_keys;
 }
+
+export {
+	normalizedKeystrokes,
+	keystrokeForKeyboardEvent,
+	MODIFIERS,
+	characterForKeyboardEvent,
+	calculateSpecificity,
+	isBareModifier,
+	isModifierKeyup,
+	isKeyup,
+	keydownEvent,
+	keyupEvent,
+	getModifierKeys,
+	buildKeyboardEvent,
+};

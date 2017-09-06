@@ -15,6 +15,7 @@
     "javascript"
   ],
   "dependencies": {
+    "clear-cut": "^2.0.2",
     "event-kit": "^2.3.0",
     "lodash": "^4.17.4"
   },

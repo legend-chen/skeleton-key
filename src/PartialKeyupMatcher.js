@@ -9,7 +9,7 @@ class PartialKeyupMatcher {
 	}
 
 	getMatches(userKeyupKeystroke) {
-		let userKeyupKeystroke = this._normalizeKeystroke(userKeyupKeystroke);
+		userKeyupKeystroke = this._normalizeKeystroke(userKeyupKeystroke);
 
 		let matches = new Set();
 

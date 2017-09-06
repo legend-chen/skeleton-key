@@ -4,7 +4,7 @@ const MATCH_TYPES = {
 	PENDING_KEYUP: 'pendingKeyup',
 }
 
-export MATCH_TYPES;
+export { MATCH_TYPES };
 
 class KeyBinding {
 	static currentIndex = 1;
@@ -25,12 +25,12 @@ class KeyBinding {
 	}
 
 	matches(keystroke) {
-		const multiKeystroke = /\s/.test keystroke;
+		const multiKeystroke = /\s/.test(keystroke);
 
 		if (multiKeystroke) {
 			keystroke === this.keystroke;
 		} else {
-			keystroke.split(' ')[0] === @keystroke.split(' ')[0];
+			keystroke.split(' ')[0] === this.keystroke.split(' ')[0];
 		}
 	}
 
@@ -51,7 +51,9 @@ class KeyBinding {
 			return this.cachedKeyups;
 		}
 
-		for (keystroke, i === this.keystrokeArray) {
+		for (var i = 0, l = this.keystrokesArray.length; i < l; i++) {
+			const keystroke = this.keystrokesArray[i];
+
 			if (isKeyup(keystroke)) {
 				return this.cachedKeyups = this.keystrokeArray.slice(i)
 			}
@@ -100,7 +102,9 @@ class KeyBinding {
 			}
 
 			if (isPartialMatch) {
-				bindingRemainderContainsOnlyKeyups = false unless bindingKeystroke.startsWith('^')
+				if (!bindingKeystroke.startsWith('^')) {
+					bindingRemainderContainsOnlyKeyups = false;
+				}
 			}
 		}
 
