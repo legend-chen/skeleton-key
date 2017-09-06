@@ -15,7 +15,8 @@
     "javascript"
   ],
   "dependencies": {
-    "event-kit": "^2.3.0"
+    "event-kit": "^2.3.0",
+    "lodash": "^4.17.4"
   },
   "devDependencies": {
     "babel-cli": "^6.26.0",
