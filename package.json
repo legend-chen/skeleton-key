@@ -17,6 +17,7 @@
   "dependencies": {
     "clear-cut": "^2.0.2",
     "event-kit": "^2.3.0",
+    "keyboard-layout": "^2.0.13",
     "lodash": "^4.17.4"
   },
   "devDependencies": {
@@ -24,7 +25,10 @@
     "babel-preset-env": "^1.6.0",
     "babel-preset-es2016": "^6.24.1",
     "babel-preset-stage-2": "^6.24.1",
-    "jest": "^21.0.1"
+    "jest": "^21.0.1",
+    "lolex": "^2.1.2",
+    "sinon": "^3.2.1",
+    "space-pencil": "^0.3.0"
   },
   "homepage": "https://github.com/SMBurrows/skeleton-key#readme",
   "repository": {

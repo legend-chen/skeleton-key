@@ -1,4 +1,5 @@
 import { calculateSpecificity } from 'clear-cut';
+import KeyboardLayout from 'keyboard-layout'
 import USKeyMap from './US-Keymap';
 
 const MODIFIERS = new Set(['ctrl', 'alt', 'shift', 'cmd'])
@@ -39,7 +40,7 @@ const isLatinKeymap = (keymap) => {
 		return true;
 	}
 
-	isLatin = LATIN_KEYMAP_CACHE.get(keymap);
+	let isLatin = LATIN_KEYMAP_CACHE.get(keymap);
 
 	if (isLatin) {
 		return isLatin;
@@ -78,98 +79,104 @@ const usCharactersForKeyCode = (code) => {
 	return usKeymap[code];
 }
 
-const normalizedKeystrokes = (keystroke) => {
-	let keyup = isKeyup(keystroke);
-	if (keyup) {
-		keystroke = keystroke.slice(1);
-	}
+const normalizeKeystrokes = (keystrokes) => {
 
-	let keys = parseKeystroke(keystroke);
-	if (!keys) {
-		return false;
-	}
+	const normalizedKeystrokes = []
+	let _keystrokes = keystrokes.split(WHITESPACE_REGEX);
 
-	let primaryKey = null;
-	const modifiers = new Set();
+	for (let i = 0, l = _keystrokes.length; i < l; i++) {
 
-	for (let i = 0, len = keys.length; i < len; i++) {
-		const key = keys[i];
+		const keystroke = _keystrokes[i];
+		const normalizedKeystroke = normalizeKeystroke(keystroke);
 
-		if (modifiers.has(key)) {
-			modifiers.add(key);
+		if (normalizedKeystroke) {
+			normalizedKeystrokes.push(normalizedKeystroke)
 		} else {
-			if (i === keys.length - 1) {
-				primaryKey = key;
-			} else {
-				return false;
-			}
+			return false
 		}
 	}
 
-	if (keyup) {
-		if (primaryKey) {
-			primaryKey = primaryKey.toLowerCase();
-		}
-	} else {
+	return normalizedKeystrokes.join(' ');
+}
 
-		if (isUpperCaseCharacter(primaryKey)) {;
-			modifiers.add('shift');
-		}
-
-		if (modifiers.has('shift') && isLowerCaseCharacter(primaryKey)) {
-			primaryKey = primaryKey.toUpperCase();
-		}
-	}
-
-	keystroke = [];
-	if (!keyup || (key && !primaryKey)) {
-		if (modifiers.has('ctrl')) {
-			keystroke.push('ctrl');
-		}
-
-		if (modifiers.has('alt')) {
-			keystroke.push('alt');
-		}
-
-		if (modifiers.has('shift')) {
-			keystroke.push('shift');
-		}
-
-		if (modifiers.has('cmd')) {
-			keystroke.push('cmd');
-		}
-	}
-
-	if (primaryKey) {
-		keystroke.push(primaryKey);
-	}
-	keystroke.join('-');
-
-	if (keyup) {
-		keystroke = `^${keystroke}`;
-	}
-
-	return keystroke;
+const normalizeKeystroke = (keystroke) => {
+	var i, j, key, keys, keyup, len, modifiers, primaryKey;
+  if (keyup = isKeyup(keystroke)) {
+    keystroke = keystroke.slice(1);
+  }
+  keys = parseKeystroke(keystroke);
+  if (!keys) {
+    return false;
+  }
+  primaryKey = null;
+  modifiers = new Set;
+  for (i = j = 0, len = keys.length; j < len; i = ++j) {
+    key = keys[i];
+    if (MODIFIERS.has(key)) {
+      modifiers.add(key);
+    } else {
+      if (i === keys.length - 1) {
+        primaryKey = key;
+      } else {
+        return false;
+      }
+    }
+  }
+  if (keyup) {
+    if (primaryKey != null) {
+      primaryKey = primaryKey.toLowerCase();
+    }
+  } else {
+    if (isUpperCaseCharacter(primaryKey)) {
+      modifiers.add('shift');
+    }
+    if (modifiers.has('shift') && isLowerCaseCharacter(primaryKey)) {
+      primaryKey = primaryKey.toUpperCase();
+    }
+  }
+  keystroke = [];
+  if (!keyup || (keyup && (primaryKey == null))) {
+    if (modifiers.has('ctrl')) {
+      keystroke.push('ctrl');
+    }
+    if (modifiers.has('alt')) {
+      keystroke.push('alt');
+    }
+    if (modifiers.has('shift')) {
+      keystroke.push('shift');
+    }
+    if (modifiers.has('cmd')) {
+      keystroke.push('cmd');
+    }
+  }
+  if (primaryKey != null) {
+    keystroke.push(primaryKey);
+  }
+  keystroke = keystroke.join('-');
+  if (keyup) {
+    keystroke = "^" + keystroke;
+  }
+  return keystroke;
 }
 
 const parseKeystroke = (keystroke) => {
-	const keys = [];
-	let keyStart = 0;
-
-	for (let i = 0, l = keystroke.length; i < l; i++) {
-		const charactor = keystroke[i];
-
-		if (charactor === '-') {
-			keys.push(keystroke.substring(keyStart, index));
-			keyStart = index + 1;
-
-			if (keyStart === keystroke.length) {
-				return false;
+	// TODO: Tidy this up.
+	var character, i, index, keyStart, keys, len;
+	keys = [];
+	keyStart = 0;
+	for (index = i = 0, len = keystroke.length; i < len; index = ++i) {
+		character = keystroke[index];
+		if (character === '-') {
+			if (index > keyStart) {
+				keys.push(keystroke.substring(keyStart, index));
+				keyStart = index + 1;
+				if (keyStart === keystroke.length) {
+					return false;
+				}
 			}
 		}
 	}
-
-	if (keyStart < keystroke) {
+	if (keyStart < keystroke.length) {
 		keys.push(keystroke.substring(keyStart));
 	}
 
@@ -199,7 +206,6 @@ const buildKeyboardEvent = (key, eventType, options = {}) => {
 			get: () => [target]
 		});
 	}
-
 
 	return event;
 }
@@ -265,6 +271,7 @@ const keystrokeForKeyboardEvent = (event, customKeystrokeResolvers) => {
 	}
 
 	keystroke = keystrokes.join('-');
+
 	if (event.type === 'keyup') {
 		keystroke = normalizeKeystroke(`^${keystroke}`);
 	}
@@ -324,7 +331,7 @@ const getModifierKeys = (keystroke) => {
 }
 
 export {
-	normalizedKeystrokes,
+	normalizeKeystrokes,
 	keystrokeForKeyboardEvent,
 	MODIFIERS,
 	characterForKeyboardEvent,

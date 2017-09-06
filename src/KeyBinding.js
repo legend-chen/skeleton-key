@@ -1,3 +1,11 @@
+import _ from 'lodash';
+
+import {
+	calculateSpecificity,
+	MODIFIERS,
+	isKeyup
+} from './helpers'
+
 const MATCH_TYPES = {
 	EXACT: 'exact',
 	PARTIAL: 'partial',
@@ -15,9 +23,8 @@ class KeyBinding {
 		this.command = command;
 		this.keystrokes = keystrokes;
 		this.priority = priority;
-
-		this.keystrokesArray = this.keystrokes.split(' ');
-		this.keystrokesCount = this.keystrokeArray.length;
+		this.keystrokeArray = this.keystrokes.split(' ');
+		this.keystrokeCount = this.keystrokeArray.length;
 		this.selector = selector.replace(/!important/g, '');
 		this.specificity = calculateSpecificity(selector);
 		this.index = this.constructor.currentIndex++;
@@ -51,8 +58,8 @@ class KeyBinding {
 			return this.cachedKeyups;
 		}
 
-		for (var i = 0, l = this.keystrokesArray.length; i < l; i++) {
-			const keystroke = this.keystrokesArray[i];
+		for (var i = 0, l = this.keystrokeArray.length; i < l; i++) {
+			const keystroke = this.keystrokeArray[i];
 
 			if (isKeyup(keystroke)) {
 				return this.cachedKeyups = this.keystrokeArray.slice(i)
@@ -64,14 +71,15 @@ class KeyBinding {
 		let userKeystrokeIndex = -1;
 		let userKeystrokesHasKeydownEvent = false;
 
-		matchesNextUserKeystroke = (bindingKeystroke) => {
+		const matchesNextUserKeystroke = (bindingKeystroke) => {
 			while (userKeystrokeIndex < userKeystrokes.length - 1) {
 				userKeystrokeIndex += 1;
-				userKeystroke = userKeystrokes[userKeystrokeIndex];
+
+				const userKeystroke = userKeystrokes[userKeystrokeIndex];
 				const isKeydownEvent = !isKeyup(userKeystroke);
 
 				if (isKeydownEvent) {
-						userKeystrokesHasKeydownEvent = true;
+					userKeystrokesHasKeydownEvent = true;
 				}
 
 				if (bindingKeystroke === userKeystroke) {
@@ -86,22 +94,24 @@ class KeyBinding {
 		let isPartialMatch = false;
 		let bindingRemainderContainsOnlyKeyups = true;
 		let bindingKeystrokeIndex = 0;
+		let doesMatch;
 
-		for (bindingKeystroke in this.keystrokeArray) {
+		for (var i = 0, l = this.keystrokeArray.length; i < l; i ++) {
+			const bindingKeystroke = this.keystrokeArray[i];
+
 			if (!isPartialMatch) {
-				doesMatch = matchesNextUserKeystroke(bindingKeystroke)
-				if (doesMatch === false) {
-					return false
-				}
-			} else if (!doesMatch) {
-				if (userKeystrokesHasKeydownEvent) {
-					isPartialMatch = true;
-				} else {
-					return false;
-				}
-			}
+				doesMatch = matchesNextUserKeystroke(bindingKeystroke);
 
-			if (isPartialMatch) {
+				if (doesMatch === false) {
+					return false;
+				} else if (!doesMatch) {
+					if (userKeystrokesHasKeydownEvent) {
+						isPartialMatch = true;
+					} else {
+						return false;
+					}
+				}
+			} else {
 				if (!bindingKeystroke.startsWith('^')) {
 					bindingRemainderContainsOnlyKeyups = false;
 				}

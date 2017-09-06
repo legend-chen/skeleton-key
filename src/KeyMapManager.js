@@ -1,6 +1,8 @@
 import _ from 'lodash';
 import { Emitter, Disposable, CompositeDesposable } from 'event-kit';
+import { isSelectorValid } from 'clear-cut';
 import CommandEvent from './CommandEvent';
+import KeyBinding, { MATCH_TYPES } from './KeyBinding';
 import {
 	normalizeKeystrokes,
 	keystrokeForKeyboardEvent,
@@ -74,7 +76,7 @@ class KeymapManager {
 
 		_.each(keyBindingsBySelector, (keyBindings, selector) => {
 
-			if (throwOnInvalidSelector && !isSelectorValid(selector.valid(/!important/g, ''))) {
+			if (throwOnInvalidSelector && !isSelectorValid(selector.replace(/!important/g, ''))) {
 				console.warn(`Encountered an invalid selector adding key bindings from '${source}': '${selector}'`);
 				return;
 			}
@@ -83,7 +85,7 @@ class KeymapManager {
 				console.warn(`Encountered an invalid selector adding key bindings from '${source}': '${selector}'`);
 			}
 
-			_.each(keyBindings, (keystrokes, command) => {
+			_.each(keyBindings, (command, keystrokes) => {
 				command = command.toString() || '';
 
 				if (command.length === 0) {
@@ -91,21 +93,21 @@ class KeymapManager {
 					return;
 				}
 
-				let normalizedKeystrokes = normalizedKeystrokes(keystrokes);
+				let normalizedKeystrokes = normalizeKeystrokes(keystrokes);
 				if (normalizedKeystrokes) {
 					bindings.push(new KeyBinding(source, command, normalizedKeystrokes, selector, priority));
 				} else {
 					console.warn(`Invalid keystroke sequence for binding: ${keystrokes}: ${command} in ${source}`);
 				}
-
-				return bindings;
 			});
 		});
+
+		return bindings;
 	}
 
-	add(source, priority = 0, throwOnInvalidSelector = true) {
-		const addedKeyBindings = this.build(source, keyBindingsBySelector, priority, throwOnInvalidSelector);
+	add(source, keyBindingsBySelector, priority = 0, throwOnInvalidSelector = true) {
 
+		const addedKeyBindings = this.build(source, keyBindingsBySelector, priority, throwOnInvalidSelector);
 		this.keyBindings.push(...addedKeyBindings);
 
 		new Disposable(() => {
@@ -162,7 +164,7 @@ class KeymapManager {
 			partialMatchCandidates,
 			pendingKeyupMatchCandidates,
 			exactMatchCandidates
-		} = this.findMatchCandidates(this.queuedKeystrokes, disabledBindings);
+		} = this.findMatchCandidates(this.queuedKeyStrokes, disabledBindings);
 
 		let dispatchedExactMatch = null;
 		let partialMatches = this.findPartialMatches(partialMatchCandidates, target);
@@ -187,10 +189,12 @@ class KeymapManager {
 			let currentTarget = target;
 			let eventHandled = false;
 
-			while (!eventHandled && currentTarget !== document) {
-				let exactMatches = this.findExactMatches(exactMatchCandidates, currentTarge);
+			while (!eventHandled && currentTarget && currentTarget !== document) {
 
-				for (exactMatchCandidates in exactMatches) {
+				let exactMatches = this.findExactMatches(exactMatchCandidates, currentTarget);
+				for (let i = 0, l = exactMatches.length; i < l; i++) {
+					const exactMatchCandidate = exactMatches[i];
+
 					if (exactMatchCandidate.command === 'native!') {
 						let shouldUsePartialMatches = false;
 						let eventHandled = true;
@@ -206,33 +210,33 @@ class KeymapManager {
 					if (exactMatchCandidate.command === 'unset!') {
 						break;
 					}
-				}
 
-				if (hasPartialMatches) {
-					let allPartialMatchesContainKeyupRemainder = true;
-					for (partialMatch in partialMatches) {
-						if (pendingKeyupMatchCandidates.indexOf(partialMatch) < 0) {
-							allPartialMatchesContainKeyupRemainder = false;
+					if (hasPartialMatches) {
+						let allPartialMatchesContainKeyupRemainder = true;
+						for (partialMatch in partialMatches) {
+							if (pendingKeyupMatchCandidates.indexOf(partialMatch) < 0) {
+								allPartialMatchesContainKeyupRemainder = false;
+								break;
+							}
+						}
+
+						if (!allPartialMatchesContainKeyupRemainder) {
 							break;
 						}
+					} else {
+						shouldUsePartialMatches = false;
 					}
 
-					if (!allPartialMatchesContainKeyupRemainder) {
+					if (this.dispatchCommandEvent(exactMatchCandidate.command, target, event)) {
+						dispatchedExactMatch = exactMatchCandidate;
+						let eventHandled = true;
+
+						for (pendingKeyupMatch in pendingKeyupMatchCandidates) {
+							this.pendingKeyupMatcher.addPendingMatch(pendingKeyupMatch);
+						}
+
 						break;
 					}
-				} else {
-					shouldUsePartialMatches = false;
-				}
-
-				if (this.dispatchCommandEvent(exactMatchCandidate.command, target, event)) {
-					let dispatchedExactMatch = exactMatchCandidate;
-					let eventHandled = true;
-
-					for (pendingKeyupMatch in pendingKeyupMatchCandidates) {
-						this.pendingKeyupMatcher.addPendingMatch(pendingKeyupMatch);
-					}
-
-					break;
 				}
 
 				currentTarget = currentTarget.parentElement;
@@ -307,11 +311,11 @@ class KeymapManager {
 	}
 
 	simulateTextInput(keydownEvent) {
-		let charactor = characterForKeyboardEvent(keydownEvent);
-		if (charactor) {
-			let textInputEvent = document.createEvent("TextEvent");
+		var character, textInputEvent;
+		if (character = characterForKeyboardEvent(keydownEvent)) {
+			textInputEvent = document.createEvent("TextEvent");
 			textInputEvent.initTextEvent("textInput", true, true, window, character);
-			keydownEvent.path[0].dispatchEvent(textInputEvent);
+			return keydownEvent.path[0].dispatchEvent(textInputEvent);
 		}
 	}
 
@@ -321,22 +325,22 @@ class KeymapManager {
 		let pendingKeyupMatchCandidates = [];
 		let disabledBindingSet = new Set(disabledBindings);
 
-		for (binding in this.keyBindings) {
-			if (!disabledBindingSet.has(binding)) {
-				let doesMatch = binding.matchesKeystrokes(keystrokeArray);
+		for (var i = 0, l = this.keyBindings.length; i < l; i ++) {
+			const binding = this.keyBindings[i];
 
-				if (doesMatch === MATCH_TYPES.EXACT) {
-					exactMatchCandidates.push(binding);
-				} else if (doesMatch === MATCH_TYPES.PARTIAL) {
-					partialMatchCandidates.push(binding);
-				} else if (doesMatch === MATCH_TYPES.PENDING_KEYUP) {
-					partialMatchCandidates.push(binding);
-					pendingKeyupMatchCandidates.push(binding);
-				}
+			let doesMatch = binding.matchesKeystrokes(keystrokeArray);
+
+			if (doesMatch === MATCH_TYPES.EXACT) {
+				exactMatchCandidates.push(binding);
+			} else if (doesMatch === MATCH_TYPES.PARTIAL) {
+				partialMatchCandidates.push(binding);
+			} else if (doesMatch === MATCH_TYPES.PENDING_KEYUP) {
+				partialMatchCandidates.push(binding);
+				pendingKeyupMatchCandidates.push(binding);
 			}
 		}
 
-		return {partialMatchCandidates, pendingKeyupMatchCandidates, exactMatchCandidates};
+		return { partialMatchCandidates, pendingKeyupMatchCandidates, exactMatchCandidates };
 	}
 
 	findPartialMatches(partialMatchCandidates, target) {
@@ -369,7 +373,9 @@ class KeymapManager {
 
 	findExactMatches(exactMatchCandidates, target) {
 		return exactMatchCandidates
-			.filter((binding) => target.webkitMatchesSelector(binding.selector))
+			.filter((binding) => {
+				return target.webkitMatchesSelector(binding.selector)
+			})
 			.sort((a, b) => a.compare(b));
 	}
 
@@ -425,8 +431,8 @@ class KeymapManager {
 		return;
 	}
 
-	dispatchCommandEvent(commandEvent, target, keyboardEvent) {
-		commandEvent = new CustomEvent(command, {
+	dispatchCommandEvent(command, target, keyboardEvent) {
+		const commandEvent = new CustomEvent(command, {
 			bubbles: true,
 			cancelable: true
 		});
