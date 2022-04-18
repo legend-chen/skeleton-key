@@ -1,4 +1,3 @@
-import _ from 'lodash';
 import { Emitter, Disposable, CompositeDesposable } from 'event-kit';
 import { isSelectorValid } from 'clear-cut';
 import CommandEvent from './CommandEvent';
@@ -74,23 +73,26 @@ class KeymapManager {
 	build(source, keyBindingsBySelector, priority = 0, throwOnInvalidSelector = true) {
 		const bindings = [];
 
-		_.each(keyBindingsBySelector, (keyBindings, selector) => {
+		for (let selector in keyBindingsBySelector) {
+			let keyBindings = keyBindingsBySelector[selector];
 
 			if (throwOnInvalidSelector && !isSelectorValid(selector.replace(/!important/g, ''))) {
 				console.warn(`Encountered an invalid selector adding key bindings from '${source}': '${selector}'`);
-				return;
+				continue;
 			}
 
-			if (!_.isObject(keyBindings)) {
+			if (!typeof keyBindings !== 'object') {
 				console.warn(`Encountered an invalid selector adding key bindings from '${source}': '${selector}'`);
+				continue;
 			}
 
-			_.each(keyBindings, (command, keystrokes) => {
+			for (let keystrokes in keyBindings) {
+				let command = keyBindings[keystrokes];
 				command = command.toString() || '';
 
 				if (command.length === 0) {
 					console.warn(`Empty command for binding: ${selector} ${keystrokes} in ${source}`);
-					return;
+					continue;
 				}
 
 				let normalizedKeystrokes = normalizeKeystrokes(keystrokes);
@@ -99,8 +101,8 @@ class KeymapManager {
 				} else {
 					console.warn(`Invalid keystroke sequence for binding: ${keystrokes}: ${command} in ${source}`);
 				}
-			});
-		});
+			}
+		}
 
 		return bindings;
 	}
