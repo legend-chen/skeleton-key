@@ -9,7 +9,6 @@ import {
     keydownEvent,
     keyupEvent,
     characterForKeyboardEvent,
-    keystrokesMatch,
     isKeyup
 } from './helpers';
 import PartialKeyupMatcher from "./PartialKeyupMatcher";
