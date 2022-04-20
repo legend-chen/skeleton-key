@@ -381,7 +381,7 @@ class KeymapManager {
 
     clearQueuedKeystrokes() {
         this.queuedKeyboardEvents = [];
-        this.queuedKeystrokes = [];
+        this.queuedKeyStrokes = [];
         this.bindingsToDisable = [];
     }
 
